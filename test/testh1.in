@@ -1,2 +1,1 @@
-let q = r in
-let T = q q in \f.\x. f (f x)
+let q = \f.\x.f (f x) in q q q q q q 

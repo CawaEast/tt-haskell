@@ -10,7 +10,7 @@ import           Control.Monad.Reader       (Reader, reader, runReader,
 import           Control.Monad.State.Lazy   (State, join, runState, state)
 import           Data.Functor               (void)
 import           Data.List                  (find)
-import           Data.Maybe                 (fromMaybe)
+import           Data.Maybe                 (fromMaybe, isJust, fromJust)
 import qualified Data.Map.Strict            as Map
 import qualified Data.Set                   as Set
 import           Text.Megaparsec            (ParseError, Parsec, Token, between,
@@ -357,23 +357,26 @@ algoritmW (HMApplication a b) ts = do
     return (changeByMap m newVar, fmap f context, newCounter, (f . f2 . f1), m)
 algoritmW (HMLambda str a) (context, counter) = do
     let (strT, newCounter) = newType counter 
+    let tmpX = context Map.!? str
     (t1, context', counter', f, m1) <- algoritmW a (Map.insert str (Mon strT) context, newCounter)
     let (Mon t1') = f (Mon (Implication strT t1)) 
     --pure (t1', fmap f $ context', counter', f, m1)
-    return (t1', fmap f $ Map.delete str context', counter', f, m1)
+    let ma1 = fmap f $ Map.delete str context'
+    let ma2 = if isJust tmpX then Map.insert str (fromJust tmpX) ma1 else ma1  
+    return (t1', ma2, counter', f, m1)
 algoritmW (HMLet str a b) (context, counter) = do
     (t1, context', counter', f, m1) <- algoritmW a (context, counter)
-    let newT1 = closureHM t1 context'
+    let (newT1, ss) = closureHM t1 context'
     (t2, context2, counter2, f2, m2) <- algoritmW b (Map.insert str newT1 context', counter')
     return (t2, context2, counter2, f2 . f, m1)
 
 
 changeByMapHM :: STEMap -> HMType -> HMType
-changeByMapHM ma v@(ForAll str a) = changeByMapHM (Map.delete str ma) $ a
+changeByMapHM ma v@(ForAll str a) = ForAll str $ changeByMapHM (Map.delete str ma) $ a
 changeByMapHM ma (Mon a) = Mon (changeByMap ma a)
 
-closureHM :: ExprType -> Context -> HMType
-closureHM e cont = foldr ForAll (Mon e) vars
+closureHM :: ExprType -> Context -> (HMType, SSet)
+closureHM e cont = (foldr ForAll (Mon e) vars, vars)
   where
     vars = (getVarsType e) 
     --vars = Set.difference (getVarsType e) $ Map.foldr (\hm l -> Set.union l $ getHMVarsType hm) Set.empty cont
