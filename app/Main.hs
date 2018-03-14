@@ -1,6 +1,6 @@
 module Main where
 
-import Lib
+import Tasks
 
 main :: IO ()
 main = putStrLn "Hello world!"  
