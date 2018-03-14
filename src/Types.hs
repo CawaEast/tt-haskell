@@ -322,6 +322,23 @@ newHMType c (Mon e) = (c, Map.empty, e)
 newHMType c (ForAll str e) = (\(c, cont, et) -> (c, Map.insert str (Mon newVar) cont, changeType str newVar et)) $ newHMType newCounter e
   where 
     (newVar, newCounter) = newType c
+    
+newHMType1 :: Int -> HMType -> (Int, Context, ExprType)
+newHMType1 c e = newHMTypeLoc c Set.empty e
+  where
+    newHMTypeLoc:: Int -> SSet-> HMType -> (Int, Context, ExprType)
+    newHMTypeLoc c s (Mon e) = newTypeLoc c s e
+    newHMTypeLoc c s (ForAll str e) = newHMTypeLoc c (Set.insert str s) e
+    newTypeLoc:: Int -> SSet-> ExprType -> (Int, Context, ExprType)
+    newTypeLoc c s (Implication a b) = (c'', Map.union cont' cont'', Implication a' b')
+      where
+      (c', cont', a') = newTypeLoc c s a 
+      (c'', cont'', b') = newTypeLoc c' s b 
+    newTypeLoc c s v@(TypeVar str)
+        | Set.member str s = (newCounter, Map.empty, newVar)
+        | otherwise =         (c, Map.empty, v)
+      where
+        (newVar, newCounter) = newType c
 
 algoritmW :: HMExpr -> (Context, Int) -> Maybe (ExprType, Context, Int, Uni, STEMap)
 algoritmW (HMVar str) (context, counter)
@@ -347,7 +364,7 @@ algoritmW (HMLambda str a) (context, counter) = do
 algoritmW (HMLet str a b) (context, counter) = do
     (t1, context', counter', f, m1) <- algoritmW a (context, counter)
     let newT1 = closureHM t1 context'
-    (t2, context2, counter2, f2, m2) <- algoritmW b (Map.insert str (closureHM t1 context') context', counter')
+    (t2, context2, counter2, f2, m2) <- algoritmW b (Map.insert str newT1 context', counter')
     return (t2, context2, counter2, f2 . f, m1)
 
 
@@ -358,7 +375,8 @@ changeByMapHM ma (Mon a) = Mon (changeByMap ma a)
 closureHM :: ExprType -> Context -> HMType
 closureHM e cont = foldr ForAll (Mon e) vars
   where
-    vars = Set.difference (getVarsType e) $ Map.foldr (\hm l -> Set.union l $ getHMVarsType hm) Set.empty cont
+    vars = (getVarsType e) 
+    --vars = Set.difference (getVarsType e) $ Map.foldr (\hm l -> Set.union l $ getHMVarsType hm) Set.empty cont
 
 getHMVarsType :: HMType -> SSet
 getHMVarsType (Mon s) = getVarsType s

@@ -1,23 +1,2 @@
-let T = \x.\y.x in
-let F = \x.\y.y in
-let Z = \f.\x. x in
-let One = \x.x in
-let Two = \f.\x. f (f x) in
-let PlusOne = \n.\f.\x.n f (f x) in
-
-let Inl = \m.\u.\v.u m in
-let Inr = \n.\u.\v.v n in
-let Case = \l.\m.\n.l m n in
-
-let And = \a.\b.\s.s a b in
-let Prl = \p.p T in
-let Prr = \p.p F in
-
-let Len = Y (\f.\x.Case x (\a.Z) (\t.PlusOne (f (Prr t)))) in
-let Cons = \x.\l.Inr (And x l) in
-let Nil = Inl Z in
-
-let Not = \x.x F T in
-let Or = \a.\b.a T b in
-
-Qsort (Append list)
+let q = r in
+let T = q q in \f.\x. f (f x)
